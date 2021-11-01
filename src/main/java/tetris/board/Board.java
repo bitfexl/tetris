@@ -19,7 +19,6 @@ public class Board {
      */
     public Board(int width, int height) {
         board = new boolean[height][width];
-        resetBoard();
         this.width = width;
         this.height = height;
     }
@@ -49,7 +48,7 @@ public class Board {
         for(int y=0; y<height; y++) {
             for(int x=0; x<width; x++) {
                 if(board[y][x]) {
-                    newBoard.setSquare(x, y);
+                    newBoard.board[y][x] = true;
                 }
             }
         }
@@ -82,23 +81,6 @@ public class Board {
     }
 
     /**
-     * Sets (places a block) a square on the board.
-     *
-     * @param x X cord of the block with 0,0 in the top left corner. Must be in bounds of the board.
-     * @param y Y cord.
-     * @return true: block has been set. false: block has already been set or x,y is greater than width,height.
-     */
-    public boolean setSquare(int x, int y) {
-        // if square is taken
-        if (testSquare(x, y)) {
-            return false;
-        }
-        // setSquare
-        board[y][x] = true;
-        return true;
-    }
-
-    /**
      * Tests if square is taken.
      *
      * @param x X cord of the block with 0,0 in the top left corner. Must be in bounds of the board.
@@ -119,7 +101,7 @@ public class Board {
      * @param piece The piece to draw.
      * @return true: piece could be drawn; false: not;
      */
-    public synchronized boolean drawPiece(int x, int y, Piece piece) {
+    public boolean drawPiece(int x, int y, Piece piece) {
         byte[][] block = piece.getPieceOrientations()[piece.rotation];
 
         if(!testPiece(x, y, piece)) {
@@ -128,7 +110,7 @@ public class Board {
 
         // test successful -> draw piece
         for (byte[] cord : block) {
-            setSquare(x + cord[0], y + cord[1]);
+            board[y + cord[1]][x + cord[0]] = true;
         }
 
         return true;
@@ -163,7 +145,7 @@ public class Board {
 
         board.drawPiece(3, 2, piece);
 
-        //board.deleteLine(2);
+        board.deleteLine(2);
 
         for (int y = 0; y < board.height; y++) {
             for (int x = 0; x < board.width; x++) {

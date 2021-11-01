@@ -6,13 +6,12 @@ public class PlayableBoard {
     /**
      * The internal board to keep track of occupied squares and line clears.
      */
-    private final BoardWithGraphics petrifiedBoard;
+    protected final Board petrifiedBoard;
 
     /**
      * The board to test piece drops on. Resembles the current position of the board.
-     * Is recreated on each move (advance() or dropPiece()).
      */
-    public BoardWithGraphics currentBoard;
+    public Board currentBoard;
 
     /**
      * The piece that is currently dropping or null if no piece is currently dropping.
@@ -26,7 +25,14 @@ public class PlayableBoard {
     private boolean gameRunning;
 
     public PlayableBoard(int width, int height) {
-        this.petrifiedBoard = new BoardWithGraphics(width, height);
+        this.petrifiedBoard = new Board(width, height);
+        this.currentBoard = new Board(width, height);
+        gameRunning = true;
+    }
+
+    protected PlayableBoard(Board pBoard, Board cBoard) {
+        this.petrifiedBoard = pBoard;
+        this.currentBoard = cBoard;
         gameRunning = true;
     }
 
@@ -42,14 +48,27 @@ public class PlayableBoard {
      * Creates a copy of the current board without the falling piece.
      * @return A copy of the current petrified board.
      */
-    public BoardWithGraphics getCurrentPetrifiedBoard() {
-        return new BoardWithGraphics(petrifiedBoard);
+    public Board getCurrentPetrifiedBoard() {
+        return new Board(petrifiedBoard);
+    }
+
+    /**
+     * Copies newBoard to petrified board. Removes currently dropping piece.
+     * @param newBoard Board to copy.
+     * @return If board could be set or not. (width and height not matching).
+     */
+    public boolean setCurrentPetrifiedBoard(Board newBoard) {
+        if(newBoard.copyTo(petrifiedBoard)) {
+            deleteCurrentDroppingPiece();
+            return true;
+        }
+        return false;
     }
 
     /**
      * Drops a piece from the top.
      * @param piece The piece to drop.
-     * @return true: piece dropped, false: gameover or a piece is not done dropping
+     * @return true: piece dropped, false: gameover or a piece is not done dropping;
      */
     public synchronized boolean dropPiece(Piece piece) {
         if(currentPiece != null) {
@@ -58,13 +77,13 @@ public class PlayableBoard {
         }
 
         currentPiece = piece;
-        currentPieceX = 4;
+        currentPieceX = (petrifiedBoard.width-1) / 2;
         currentPieceY = 0;
-        currentBoard = new BoardWithGraphics(petrifiedBoard);
 
-        if(!currentBoard.drawPiece(currentPieceX, currentPieceY, currentPiece)) {
+        if(!drawCurrentPiece()) {
             // piece could not be dropped -> gameover
             gameRunning = false;
+            return false;
         }
 
         // piece dropped
@@ -83,10 +102,11 @@ public class PlayableBoard {
 
         // go to next position
         currentPieceY++;
-        currentBoard = new BoardWithGraphics(petrifiedBoard);
 
         // test drop
-        if(currentBoard.drawPiece(currentPieceX, currentPieceY, currentPiece)) {
+        if(petrifiedBoard.testPiece(currentPieceX, currentPieceY, currentPiece)) {
+            drawCurrentPiece();
+
             // dropped one line
             return true;
         }
@@ -94,14 +114,9 @@ public class PlayableBoard {
         // go back
         currentPieceY--;
 
-        // current piece has reached its final position, draw on petrifiedBoard
+        // could not drop -> reached final position (with previous y)
         petrifiedBoard.drawPiece(currentPieceX, currentPieceY, currentPiece);
-
-        // draw to resemble current position
-        currentBoard.drawPiece(currentPieceX, currentPieceY, currentPiece);
-
-        // piece finished dropping
-        currentPiece = null;
+        clearCurrentPiece();
         return false;
     }
 
@@ -121,11 +136,7 @@ public class PlayableBoard {
 
         // test successful
         currentPieceX += amount;
-
-        currentBoard = new BoardWithGraphics(petrifiedBoard);
-
-        currentBoard.drawPiece(currentPieceX, currentPieceY, currentPiece);
-
+        drawCurrentPiece();
         return true;
     }
 
@@ -149,10 +160,8 @@ public class PlayableBoard {
             return false;
         }
 
-        // draw
-        currentBoard = new BoardWithGraphics(petrifiedBoard);
-        currentBoard.drawPiece(currentPieceX, currentPieceY, currentPiece);
-
+        // success
+        drawCurrentPiece();
         return true;
     }
 
@@ -179,12 +188,42 @@ public class PlayableBoard {
             }
         }
 
-        // copy to resemble position
-        currentBoard = new BoardWithGraphics(petrifiedBoard);
-        if(currentPiece != null) {
-            currentBoard.drawPiece(currentPieceX, currentPieceY, currentPiece);
-        }
-
+        // draw to resemble position
+        drawCurrentPiece();
         return linesCleared;
+    }
+
+    /**
+     * Deletes the currently dropping piece (if there is one) without placing it.
+     */
+    public void deleteCurrentDroppingPiece() {
+        clearCurrentPiece();
+        updateCurrentBoard();
+    }
+
+    /**
+     * Clears currently dropping piece. Does not update current board.
+     */
+    private void clearCurrentPiece() {
+        currentPiece = null;
+    }
+
+    /**
+     * Copies petrified board to current board.
+     */
+    private void updateCurrentBoard() {
+        petrifiedBoard.copyTo(currentBoard);
+    }
+
+    /**
+     * Draws current dropping piece on current board. If current piece is null it only redraws the board (return still true).
+     * @return If current board could be updated (piece could be drawn).
+     */
+    private boolean drawCurrentPiece() {
+        updateCurrentBoard();
+        if(currentPiece != null) {
+            return currentBoard.drawPiece(currentPieceX, currentPieceY, currentPiece);
+        }
+        return true;
     }
 }

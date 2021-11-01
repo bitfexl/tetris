@@ -3,6 +3,7 @@ package tetris;
 import tetris.board.BoardWithGraphics;
 import tetris.board.GraphicsInterface;
 import tetris.board.PlayableBoard;
+import tetris.board.PlayableBoardWithGraphics;
 import tetris.pieceGenerators.BagGenerator;
 import tetris.pieceGenerators.Generator;
 import tetris.pieces.Piece;
@@ -12,8 +13,9 @@ import window.Window;
 
 public class Main {
     // tetris game objects
-    private static PlayableBoard  board;
+    private static PlayableBoardWithGraphics board;
     private static Generator pieceGen;
+
     private static GraphicsInterface graphicsInterface;
 
     // lines cleared
@@ -24,9 +26,9 @@ public class Main {
 
     public static void main(String[] args) throws InterruptedException {
         // init tetris game objects
-        board = new PlayableBoard(10, 20);
-        pieceGen = new BagGenerator();
+        board = new PlayableBoardWithGraphics(10, 20);
         graphicsInterface = new GraphicsInterface(10, 20);
+        pieceGen = new BagGenerator();
         score = 0;
 
         // init gui
@@ -44,11 +46,11 @@ public class Main {
                 nextPiece = pieceGen.next();
             }
 
-            // update board
-            displayBoard();
-
             // add cleared lines to score
             score += board.tryClear();
+
+            // update graphics
+            refreshGraphics();
 
             // update score
             window.setScore(score);
@@ -58,16 +60,11 @@ public class Main {
     }
 
     /**
-     * Copies the current board state to graphicsinterface (gui).
+     * Copies graphics of currentBoard to graphicsInterface.
      */
-    private static void displayBoard() {
-        graphicsInterface.oPieces = board.currentBoard.oPieces;
-        graphicsInterface.iPieces = board.currentBoard.iPieces;
-        graphicsInterface.lPieces = board.currentBoard.lPieces;
-        graphicsInterface.jPieces = board.currentBoard.jPieces;
-        graphicsInterface.sPieces = board.currentBoard.sPieces;
-        graphicsInterface.tPieces = board.currentBoard.tPieces;
-        graphicsInterface.zPieces = board.currentBoard.zPieces;
+    private static void refreshGraphics() {
+        // Copy to get rid of flickering while graphicsInterface of currentBoard is updating.
+        board.copyGraphicsInterface(graphicsInterface);
     }
 
     /**
@@ -91,7 +88,8 @@ public class Main {
 
         // gameover -> restart on keypress
         if(!board.isGameRunning()) {
-            board = new PlayableBoard(10, 20);
+            board = new PlayableBoardWithGraphics(10, 20);
+            pieceGen = new BagGenerator();
             score = 0;
         }
     }
